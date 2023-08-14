@@ -9,18 +9,21 @@ type SupportedTrackingSite struct {
 }
 
 type TrackingSiteUser struct {
-	ID        uint   `gorm:"primaryKey"`
-	Username  string `gorm:"not null, uniqueIndex:user_site_unique"`
-	SiteID    int    `gorm:"not null, uniqueIndex:user_site_unique"`
-	Site      SupportedTrackingSite
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID             uint   `gorm:"primaryKey"`
+	Username       string `gorm:"not null, uniqueIndex:user_site_unique"`
+	ExternalID     string // id on the tracking size
+	TrackingSiteID int    `gorm:"not null, uniqueIndex:user_site_unique"`
+	TrackingSite   SupportedTrackingSite
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 type AnimeListEntry struct {
-	UserID  uint `gorm:"primaryKey;autoIncrement:false" json:"-"`
-	User    TrackingSiteUser
-	AnimeID uint `gorm:"primaryKey;autoIncrement:false" json:"-"`
-	Anime   Anime
-	Score   float32
+	UserID        uint `gorm:"primaryKey;autoIncrement:false" json:"-"`
+	User          TrackingSiteUser
+	AnimeID       uint `gorm:"primaryKey;autoIncrement:false" json:"-"`
+	Anime         Anime
+	WatchStatusID uint `json:"-"`
+	WatchStatus   AnimeWatchStatus
+	Score         float32
 }
