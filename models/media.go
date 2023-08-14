@@ -1,49 +1,48 @@
 package models
 
 import (
-	"database/sql"
 	"time"
 )
 
 type AnimeFormat struct {
-	ID      uint   `gorm:"primaryKey"`
+	ID      uint   `gorm:"primaryKey" json:"-"`
 	Name    string `gorm:"unique"`
-	Mal     string `gorm:"unique"`
-	Anilist string `gorm:"unique"`
+	Mal     string `gorm:"unique" json:"-"`
+	Anilist string `gorm:"unique" json:"-"`
 }
 
 type AnimeAirStatus struct {
-	ID      uint   `gorm:"primaryKey"`
+	ID      uint   `gorm:"primaryKey" json:"-"`
 	Name    string `gorm:"unique"`
-	Mal     string `gorm:"unique"`
-	Anilist string `gorm:"unique"`
+	Mal     string `gorm:"unique" json:"-"`
+	Anilist string `gorm:"unique" json:"-"`
 }
 
 type AnimeWatchStatus struct {
-	ID      uint   `gorm:"primaryKey"`
+	ID      uint   `gorm:"primaryKey" json:"-"`
 	Name    string `gorm:"unique"`
-	Mal     string `gorm:"unique"`
-	Anilist string `gorm:"unique"`
+	Mal     string `gorm:"unique" json:"-"`
+	Anilist string `gorm:"unique" json:"-"`
 }
 
 type Genre struct {
-	ID   uint   `gorm:"primaryKey"`
+	ID   uint   `gorm:"primaryKey" json:"-"`
 	Name string `gorm:"unique"`
 }
 
 type Anime struct {
 	ID                     uint   `gorm:"primaryKey"`
-	AnilistID              uint   `gorm:"index"`
+	AnilistID              uint   `gorm:"index" `
 	MalID                  uint   `gorm:"index"`
 	Title                  string `gorm:"not null"`
-	AnilistCover           sql.NullString
-	MalCover               sql.NullString
-	AnilistDescription     sql.NullString
-	MalDescription         sql.NullString
-	FormatID               uint
+	AnilistCover           *string
+	MalCover               *string
+	AnilistDescription     *string
+	MalDescription         *string
+	FormatID               uint `json:"-"`
 	Format                 AnimeFormat
-	ReleaseYear            sql.NullInt64
-	StatusID               uint
+	ReleaseYear            *int
+	StatusID               uint `json:"-"`
 	Status                 AnimeAirStatus
 	AnilistNormalizedScore float32
 	MalNormalizedScore     float32
@@ -52,7 +51,8 @@ type Anime struct {
 	Genres                 []Genre `gorm:"many2many:anime_genres;"`
 }
 
+// Eagerly get anime data from database
 func (a *Anime) GetFromID(id int) (int, error) {
-	result := SqlDB.Where("id = ?", id).Find(a)
+	result := SqlDB.Preload("Genres").Preload("Format").Preload("Status").Where("id = ?", id).Find(a)
 	return int(result.RowsAffected), result.Error
 }
