@@ -63,5 +63,8 @@ func Migrate() {
 	SqlDB.AutoMigrate(&AnimeWatchStatus{})
 	SqlDB.AutoMigrate(&Anime{})
 
+	SqlDB.AutoMigrate(&TrackingSiteUser{})
+	SqlDB.AutoMigrate(&AnimeListEntry{})
+
 	populateDefault()
 }
