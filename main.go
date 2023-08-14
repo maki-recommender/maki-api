@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/middleware/favicon"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
 // center the string given a number of spaces
@@ -65,6 +66,11 @@ func main() {
 		ErrorHandler: errorHandler,
 	})
 	app.Use(favicon.New())
+	app.Use(logger.New(logger.Config{
+		Format:     "${time}: ${method} ${path} - ${status} ${latency}\n",
+		TimeFormat: "2006/01/02 15:04:05.0700",
+		TimeZone:   "Europe/London",
+	}))
 
 	app.Get("/", index)
 	anime.RegisterHandlers(app)
