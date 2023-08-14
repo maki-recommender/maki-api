@@ -18,7 +18,7 @@ func getAnimeInfo(c *fiber.Ctx) error {
 	}
 
 	anime := models.Anime{}
-	cnt, err := anime.GetFromID(id)
+	cnt, err := anime.EagerlyGetFromID(id)
 	if cnt != 1 || err != nil {
 		return fiber.ErrNotFound
 	}

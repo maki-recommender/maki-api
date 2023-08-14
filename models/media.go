@@ -52,7 +52,7 @@ type Anime struct {
 }
 
 // Eagerly get anime data from database
-func (a *Anime) GetFromID(id int) (int, error) {
+func (a *Anime) EagerlyGetFromID(id int) (int, error) {
 	result := SqlDB.Preload("Genres").Preload("Format").Preload("Status").Where("id = ?", id).Find(a)
 	return int(result.RowsAffected), result.Error
 }
