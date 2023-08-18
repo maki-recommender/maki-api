@@ -9,7 +9,7 @@ import (
 func ConnectSQLDB(dns string) *gorm.DB {
 
 	db, err := gorm.Open(postgres.Open(dns), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Warn),
+		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
 		panic(err)

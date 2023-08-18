@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package maki;
+
+option go_package = "./rickycorte/maki/proto/RecommendationService";
+
+service RecommendationService {
+
+    // Get a list of reccomendations based on the user list given as input
+    rpc GetAnimeRecommendations(WatchedAnime) returns (RecommendedAnime);
+
+}
+
+// input item representing the id of an anime that the user watched in the past
+message Item {
+    uint32 id = 1;
+}
+
+// Recommended item
+message RecommendedItem{
+    // item id
+    uint32 id = 1;
+    // computed score of this item
+    float score = 2;
+}
+
+// anime recommendation request body
+message WatchedAnime {
+    // list of ids of watched animes
+    repeated Item items = 1;
+    // desired number of recommendations
+    optional int32 k = 2;
+}
+
+// Response to an anime recommendation request
+message RecommendedAnime {
+    //list of recommended items
+    repeated RecommendedItem items = 1;
+}

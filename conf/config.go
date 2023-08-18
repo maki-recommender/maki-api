@@ -12,8 +12,9 @@ const VERSION_MINOR = 0
 const VERSION_FIX = 0
 
 type Configuration struct {
-	ServerAddress   string `required:"true" default:":8080"`
-	SqlDBConnection string `required:"true"`
+	ServerAddress                string `required:"true" default:":8080"`
+	SqlDBConnection              string `required:"true"`
+	RecommendationServiceAddress string `required:"true" default:"0.0.0.0:50051"`
 }
 
 // Read configuration from environment variables named like:

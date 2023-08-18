@@ -2,6 +2,8 @@ package models
 
 import (
 	"time"
+
+	"gorm.io/gorm/clause"
 )
 
 type AnimeFormat struct {
@@ -11,12 +13,16 @@ type AnimeFormat struct {
 	Anilist string `gorm:"unique" json:"-"`
 }
 
+/* ----------------------------------------------------------------------------*/
+
 type AnimeAirStatus struct {
 	ID      uint   `gorm:"primaryKey" json:"-"`
 	Name    string `gorm:"unique"`
 	Mal     string `gorm:"unique" json:"-"`
 	Anilist string `gorm:"unique" json:"-"`
 }
+
+/* ----------------------------------------------------------------------------*/
 
 type AnimeWatchStatus struct {
 	ID      uint   `gorm:"primaryKey" json:"-"`
@@ -25,10 +31,14 @@ type AnimeWatchStatus struct {
 	Anilist string `gorm:"unique" json:"-"`
 }
 
+/* ----------------------------------------------------------------------------*/
+
 type Genre struct {
 	ID   uint   `gorm:"primaryKey" json:"-"`
 	Name string `gorm:"unique"`
 }
+
+/* ----------------------------------------------------------------------------*/
 
 type Anime struct {
 	ID                     uint   `gorm:"primaryKey"`
@@ -55,4 +65,11 @@ type Anime struct {
 func (a *Anime) EagerlyGetFromID(id int) (int, error) {
 	result := SqlDB.Preload("Genres").Preload("Format").Preload("Status").Where("id = ?", id).Find(a)
 	return int(result.RowsAffected), result.Error
+}
+
+func EagerlyGetAnimesFromIDs(ids []int) ([]Anime, error) {
+	var items []Anime
+
+	result := SqlDB.Preload(clause.Associations).Where("id IN ?", ids).Find(&items)
+	return items, result.Error
 }

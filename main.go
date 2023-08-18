@@ -6,6 +6,7 @@ import (
 	"rickycorte/maki/anime"
 	"rickycorte/maki/conf"
 	"rickycorte/maki/models"
+	"rickycorte/maki/protos/RecommendationService"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -60,6 +61,9 @@ func main() {
 	sql := conf.ConnectSQLDB(makiCfg.SqlDBConnection)
 	models.SetDatabase(sql)
 	models.Migrate()
+
+	// set gRPC settings
+	RecommendationService.SetMakiConfig(makiCfg)
 
 	// create fiber app
 	app := fiber.New(fiber.Config{
