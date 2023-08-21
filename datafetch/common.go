@@ -1,7 +1,6 @@
 package datafetch
 
 import (
-	"errors"
 	"rickycorte/maki/models"
 	"time"
 
@@ -15,8 +14,7 @@ func GetUserId(site, username string) (int, error) {
 	if site == "anilist" {
 		return anilistGetUserID(username)
 	} else {
-		log.Info("Ops mal is not available yet")
-		return -1, errors.New("not implemented yet")
+		return malGetUserID(username)
 	}
 
 }
@@ -28,13 +26,19 @@ func UpdateAnimeList(user *models.TrackingSiteUser) error {
 	start := time.Now()
 	site := user.TrackingSite.Name
 
+	var err error = nil
+
 	if site == "anilist" {
-		return anilistGetUserAnimeList(user)
+		err = anilistGetUserAnimeList(user)
 	} else {
-		log.Info("Ops mal is not available yet")
+		err = malGetUserAnimeList(user)
+	}
+
+	if err != nil {
+		log.Errorf("Error while updating user list: %s", err)
 	}
 
 	delta := time.Since(start)
 	log.Infof("Anime list update for %s user %s took %dms", site, user.Username, delta.Milliseconds())
-	return nil
+	return err
 }

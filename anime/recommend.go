@@ -104,6 +104,8 @@ func createValidDBUser(site *models.SupportedTrackingSite, username string) (*mo
 
 	user.Create()
 
+	log.Infof("Created new %s user: %s", site.Name, username)
+
 	return &user, nil
 }
 
@@ -172,8 +174,6 @@ func recommendAnimeToUser(user *models.TrackingSiteUser, k int) (*AnimeRecommend
 	}
 
 	// apply filters here
-
-	//TODO: recommendations contain already seen items...
 
 	// shuffle fist top 2 * maxRecommendations items to give user a bit of variability
 	recItems := recs.Items[:k]

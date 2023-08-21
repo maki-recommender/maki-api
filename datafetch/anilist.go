@@ -152,7 +152,7 @@ func anilistGetUserAnimeList(user *models.TrackingSiteUser) error {
 				"score":           float32(e["score"].(float64) / scoreScale),
 			}
 
-			err := models.SqlDB.Clauses(conflictClause).Table("anime_list_entries").Create(values)
+			err := models.SqlDB.Clauses(conflictClause).Table("anime_list_entries").Create(values).Error
 
 			if err != nil {
 				log.Info(err)
