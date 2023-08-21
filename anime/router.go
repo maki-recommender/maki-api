@@ -12,6 +12,7 @@ import (
 // TODO: set from config
 var maxRecommendations = 100
 var defaultRecommendations = 12
+var listIsOldAfterSeconds = 15 * 60
 
 /* ----------------------------------------------------------------------------*/
 
@@ -56,13 +57,28 @@ func recommendAnimeHandler(c *fiber.Ctx) error {
 
 	//TODO: take k and validate
 
-	user := getOrCreateUser(&site, reqUsername)
-	checkUserListUpates(user)
+	user, err := getDBUser(&site, reqUsername)
+	if err != nil {
+		return fiber.ErrInternalServerError
+	}
+
+	// unkown user -> must check if there is a valid user on the tracking site
+	if user == nil {
+		user, err = createValidDBUser(&site, reqUsername)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Unable to find the required user")
+		}
+	}
+
+	err = checkUserListUpates(user)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Unable to find the required user anime list")
+	}
 
 	recs, err := recommendAnimeToUser(user, defaultRecommendations)
 
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Something went wrong on our side")
+		return fiber.ErrInternalServerError
 	}
 
 	return c.JSON(recs)

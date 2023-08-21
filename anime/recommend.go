@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/rand"
 	"regexp"
+	"rickycorte/maki/datafetch"
 	"rickycorte/maki/models"
 	"rickycorte/maki/protos/RecommendationService"
 	"time"
@@ -65,33 +66,60 @@ func isUsernameValid(username string) bool {
 	return match
 }
 
-func getOrCreateUser(site *models.SupportedTrackingSite, username string) *models.TrackingSiteUser {
+//get db user, may return nil, nil if user was not found and no error occurred
+func getDBUser(site *models.SupportedTrackingSite, username string) (*models.TrackingSiteUser, error) {
 
 	//TODO: cache in redis to speed up most frequent users' queries
-
 	user := models.TrackingSiteUser{}
 	cnt, err := user.Search(int(site.ID), username)
 
 	if err != nil {
 		log.Error(err.Error())
+		return nil, err
 	}
 
-	// check if the user is known
 	if cnt == 0 {
-		//TODO: create user list and syncronuslt fetch user list
-		log.Infof("New user %s from %s", username, site.Name)
-	} else {
-		// check if list need to be updated in the background
-		log.Infof("Glad to see you again %s from %s", user.Username, site.Name)
+		return nil, nil
 	}
 
 	user.TrackingSite = *site
 
-	return &user
+	return &user, nil
 }
 
-func checkUserListUpates(user *models.TrackingSiteUser) {
-	//TODO: implement
+//  creates one by checking if the user actualy exists on the tracking site
+func createValidDBUser(site *models.SupportedTrackingSite, username string) (*models.TrackingSiteUser, error) {
+
+	id, err := datafetch.GetUserId(site.Name, username)
+	if err != nil {
+		return nil, err
+	}
+
+	user := models.TrackingSiteUser{
+		Username:     username,
+		TrackingSite: *site,
+		ExternalID:   id,
+	}
+	user.MarkAsNew()
+
+	user.Create()
+
+	return &user, nil
+}
+
+// this function will return errors only for foreground requests
+func checkUserListUpates(user *models.TrackingSiteUser) error {
+	// sync list in foreground if user is new
+	if user.IsNew() {
+		return datafetch.UpdateAnimeList(user)
+	} else {
+		// sync in background if list is considered outdated
+		if user.IsListOlderThan(listIsOldAfterSeconds) {
+			go datafetch.UpdateAnimeList(user)
+		}
+	}
+
+	return nil
 }
 
 func animeList2RPCWatchList(animeList []models.AnimeListEntry) *RecommendationService.WatchedAnime {
@@ -144,6 +172,8 @@ func recommendAnimeToUser(user *models.TrackingSiteUser, k int) (*AnimeRecommend
 	}
 
 	// apply filters here
+
+	//TODO: recommendations contain already seen items...
 
 	// shuffle fist top 2 * maxRecommendations items to give user a bit of variability
 	recItems := recs.Items[:k]

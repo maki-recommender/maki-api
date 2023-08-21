@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm/clause"
+)
 
 type SupportedTrackingSite struct {
 	ID      uint   `gorm:"primaryKey"`
@@ -9,7 +13,7 @@ type SupportedTrackingSite struct {
 }
 
 func (s *SupportedTrackingSite) GetFromName(name string) (int, error) {
-	result := SqlDB.Where("name = ?", name).Find(s)
+	result := SqlDB.Where("name = ?", name).First(s)
 
 	return int(result.RowsAffected), result.Error
 }
@@ -17,10 +21,10 @@ func (s *SupportedTrackingSite) GetFromName(name string) (int, error) {
 /* ----------------------------------------------------------------------------*/
 
 type TrackingSiteUser struct {
-	ID               uint   `gorm:"primaryKey"`
-	Username         string `gorm:"not null, uniqueIndex:user_site_unique"`
-	ExternalID       string // id on the tracking size
-	TrackingSiteID   int    `gorm:"not null, uniqueIndex:user_site_unique"`
+	ID               uint `gorm:"primaryKey"`
+	Username         string
+	ExternalID       int `gorm:"not null;uniqueIndex:idx_user_site_unique"` // id on the tracking size
+	TrackingSiteID   int `gorm:"not null;uniqueIndex:idx_user_site_unique"`
 	TrackingSite     SupportedTrackingSite
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
@@ -51,6 +55,18 @@ func (u *TrackingSiteUser) IsNew() bool {
 
 func (u *TrackingSiteUser) IsListOlderThan(deltaSeconds int) bool {
 	return int(time.Since(u.UpdatedAt).Seconds()) > deltaSeconds
+}
+
+// create the user or update username if the tracking site and external site ids
+// are already in the database
+func (u *TrackingSiteUser) Create() error {
+
+	conflictClause := clause.OnConflict{
+		Columns:   []clause.Column{{Name: "external_id"}, {Name: "tracking_site_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"username"}),
+	}
+
+	return SqlDB.Clauses(conflictClause).Create(u).Error
 }
 
 /* ----------------------------------------------------------------------------*/
