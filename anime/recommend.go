@@ -21,6 +21,8 @@ type AnimeRecommendationResult struct {
 	Recommendations []RecommendedAnime `json:"recommendations"`
 }
 
+/* ----------------------------------------------------------------------------*/
+
 type RecommendedAnime struct {
 	ID          uint     `json:"id"`
 	Anilist     uint     `json:"anilist"`
@@ -58,6 +60,42 @@ func (ra *RecommendedAnime) FromPairPreferMal(a *models.Anime, r *Recommendation
 		ra.Score = int(a.MalNormalizedScore * 100)
 	}
 }
+
+/* ----------------------------------------------------------------------------*/
+
+type RecommendationFilter struct {
+	K            int
+	KRandomBound int
+	Shuffle      bool
+	OnlyMal      bool
+	NoHentai     bool
+	Genre        string
+}
+
+func entryValidWithFilter(entry *AnimeCacheEntry, filter *RecommendationFilter) bool {
+	if entry == nil {
+		return false
+	}
+	if filter == nil {
+		return true
+	}
+
+	if filter.OnlyMal && !entry.hasMal {
+		return false
+	}
+
+	if filter.NoHentai && entry.IsHentai() {
+		return false
+	}
+
+	if filter.Genre != "" && !entry.HasGenre(filter.Genre) {
+		return false
+	}
+
+	return true
+}
+
+/* ----------------------------------------------------------------------------*/
 
 //get db user, may return nil, nil if user was not found and no error occurred
 func getDBUser(site *models.SupportedTrackingSite, username string) (*models.TrackingSiteUser, error) {
@@ -151,7 +189,7 @@ func generateNewRecommendations(user *models.TrackingSiteUser) (*RecommendationS
 	return recService.GetAnimeRecommendations(ctx, watchList)
 }
 
-func recommendAnimeToUser(user *models.TrackingSiteUser, k int) (*AnimeRecommendationResult, error) {
+func recommendAnimeToUser(user *models.TrackingSiteUser, filter *RecommendationFilter) (*AnimeRecommendationResult, error) {
 
 	//TODO: check redis cache
 	recs, err := generateNewRecommendations(user)
@@ -162,21 +200,37 @@ func recommendAnimeToUser(user *models.TrackingSiteUser, k int) (*AnimeRecommend
 		return nil, err
 	}
 
-	if k > len(recs.Items) {
+	k := filter.K
+	if int(k) > len(recs.Items) {
 		k = len(recs.Items)
 	}
 
-	// apply filters here
+	// apply filters and pick candidates up to the desired bound
+	items := make([]*RecommendationService.RecommendedItem, filter.KRandomBound)
+	ok := 0
+	for i := 0; ok < filter.KRandomBound && i < len(recs.Items); i++ {
+		ce := GetAnimeCache(uint(recs.Items[i].Id))
 
-	// shuffle fist top 2 * maxRecommendations items to give user a bit of variability
-	recItems := recs.Items[:k]
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(recItems), func(i, j int) { recItems[i], recItems[j] = recItems[j], recItems[i] })
+		if !entryValidWithFilter(ce, filter) {
+			continue
+		}
 
-	//convert to list of its
-	var ids []int = make([]int, k)
+		items[ok] = recs.Items[i]
+		ok += 1
+	}
+
+	if ok < k {
+		k = ok
+	}
+
+	if filter.Shuffle {
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(items), func(i, j int) { items[i], items[j] = items[j], items[i] })
+	}
+
+	ids := make([]int, k)
 	for i := 0; i < k; i++ {
-		ids[i] = int(recItems[i].Id)
+		ids[i] = int(items[i].Id)
 	}
 
 	// fetch data from db
@@ -196,8 +250,8 @@ func recommendAnimeToUser(user *models.TrackingSiteUser, k int) (*AnimeRecommend
 	// populate list by pairing data from db to reccomendations
 	for i := 0; i < k; i++ {
 		for j := 0; j < len(animes); j++ {
-			if animes[j].ID == uint(recItems[i].Id) {
-				recommendations.Recommendations[i].FromPair(&animes[j], recItems[i])
+			if animes[j].ID == uint(items[i].Id) {
+				recommendations.Recommendations[i].FromPair(&animes[j], items[i])
 			}
 		}
 	}

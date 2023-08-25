@@ -26,7 +26,7 @@ func isUsernameValid(username string) bool {
 
 // convert and check the requested number of reccomendations
 // on error return the standard number of recommendations
-func validReccommendationNumber(value string, standard, max int) int {
+func validRecommendationNumber(value string, standard, max int) int {
 	// take k from query string and validate
 	if value == "" {
 		return standard
@@ -44,6 +44,22 @@ func validReccommendationNumber(value string, standard, max int) int {
 	}
 
 	return k
+}
+
+// return a valid genre or "" if invalid
+func validGenre(value string) string {
+	if value == "" {
+		return value
+	}
+
+	value = strings.ToLower(value)
+	value = strings.Replace(value, " ", "_", -1)
+
+	if IsValidGenre(value) {
+		return value
+	}
+
+	return ""
 }
 
 /* ----------------------------------------------------------------------------*/
@@ -79,16 +95,13 @@ func recommendAnimeHandler(c *fiber.Ctx) error {
 	cnt, err := site.GetFromName(c.Params("site"))
 	if cnt == 0 || err != nil {
 		log.Info("Rejected recommendation request for unknown tracking site")
-		return fiber.NewError(fiber.StatusBadRequest, "Unkown tracking site")
+		return fiber.NewError(fiber.StatusBadRequest, "Unknown tracking site")
 	}
 
 	if !isUsernameValid(reqUsername) {
 		log.Info("Rejected recommendation request for not allowed username")
 		return fiber.NewError(fiber.StatusBadRequest, "Username not allowed")
 	}
-
-	// read required number of recommendations from query and validate
-	k := validReccommendationNumber(c.Query("k"), defaultRecommendations, maxRecommendations)
 
 	user, err := getDBUser(&site, reqUsername)
 	if err != nil {
@@ -108,8 +121,16 @@ func recommendAnimeHandler(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Unable to find the required user anime list")
 	}
 
-	//TODO: filter hentai if not requested, filter items without mal ids for mal users
-	recs, err := recommendAnimeToUser(user, k)
+	genre := validGenre(c.Query("genre"))
+	filters := RecommendationFilter{
+		K:            validRecommendationNumber(c.Query("k"), defaultRecommendations, maxRecommendations),
+		KRandomBound: 2 * maxRecommendations,
+		Shuffle:      true,
+		OnlyMal:      user.TrackingSite.Name == "mal",
+		NoHentai:     genre != "hentai",
+		Genre:        genre,
+	}
+	recs, err := recommendAnimeToUser(user, &filters)
 
 	if err != nil {
 		return fiber.ErrInternalServerError
@@ -126,4 +147,6 @@ func RegisterHandlers(app *fiber.App) {
 	animeRouter := app.Group("/anime")
 	animeRouter.Get("/data/:id<int>", getAnimeInfoHandler)
 	animeRouter.Get("/:site<minLen(3)>/:username<minLen(4),maxLen(30)>", recommendAnimeHandler)
+
+	go perdiocallyRefreshAnimeCache()
 }

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"database/sql"
 	"time"
 
 	"gorm.io/gorm/clause"
@@ -72,4 +73,10 @@ func EagerlyGetAnimesFromIDs(ids []int) ([]Anime, error) {
 
 	result := SqlDB.Preload(clause.Associations).Where("id IN ?", ids).Find(&items)
 	return items, result.Error
+}
+
+func GetAnimeCacheRows() (*sql.Rows, error) {
+	return SqlDB.Raw(`select  animes.id, mal_id is not null, array_agg(genres.name)
+		from animes join anime_genres on animes.id = anime_id JOIN genres on genres.id = genre_id
+		group by animes.id`).Rows()
 }
