@@ -168,6 +168,7 @@ func animeList2RPCWatchList(animeList []models.AnimeListEntry) *RecommendationSe
 }
 
 func generateNewRecommendations(user *models.TrackingSiteUser) (*RecommendationService.RecommendedAnime, error) {
+	start := time.Now()
 	// prepare recommendations
 	recService, err := RecommendationService.GetRecommendationServiceClient()
 	if err != nil {
@@ -186,7 +187,40 @@ func generateNewRecommendations(user *models.TrackingSiteUser) (*RecommendationS
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	return recService.GetAnimeRecommendations(ctx, watchList)
+	recs, err := recService.GetAnimeRecommendations(ctx, watchList)
+
+	log.Debugf("[%dms] gRPC recommendation generation time", time.Since(start).Milliseconds())
+
+	return recs, err
+}
+
+func applyFilter(
+	recs *RecommendationService.RecommendedAnime,
+	filter *RecommendationFilter) []*RecommendationService.RecommendedItem {
+
+	start := time.Now()
+
+	items := make([]*RecommendationService.RecommendedItem, filter.KRandomBound)
+	ok := 0
+	for i := 0; ok < filter.KRandomBound && i < len(recs.Items); i++ {
+		ce := GetAnimeCache(uint(recs.Items[i].Id))
+
+		if !entryValidWithFilter(ce, filter) {
+			continue
+		}
+
+		items[ok] = recs.Items[i]
+		ok += 1
+	}
+
+	if filter.Shuffle {
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(items), func(i, j int) { items[i], items[j] = items[j], items[i] })
+	}
+
+	log.Debugf("[%dms] filter application ", time.Since(start).Milliseconds())
+
+	return items[:ok]
 }
 
 func recommendAnimeToUser(user *models.TrackingSiteUser, filter *RecommendationFilter) (*AnimeRecommendationResult, error) {
@@ -205,27 +239,10 @@ func recommendAnimeToUser(user *models.TrackingSiteUser, filter *RecommendationF
 		k = len(recs.Items)
 	}
 
-	// apply filters and pick candidates up to the desired bound
-	items := make([]*RecommendationService.RecommendedItem, filter.KRandomBound)
-	ok := 0
-	for i := 0; ok < filter.KRandomBound && i < len(recs.Items); i++ {
-		ce := GetAnimeCache(uint(recs.Items[i].Id))
+	items := applyFilter(recs, filter)
 
-		if !entryValidWithFilter(ce, filter) {
-			continue
-		}
-
-		items[ok] = recs.Items[i]
-		ok += 1
-	}
-
-	if ok < k {
-		k = ok
-	}
-
-	if filter.Shuffle {
-		rand.Seed(time.Now().UnixNano())
-		rand.Shuffle(len(items), func(i, j int) { items[i], items[j] = items[j], items[i] })
+	if len(items) < k {
+		k = len(items)
 	}
 
 	ids := make([]int, k)
