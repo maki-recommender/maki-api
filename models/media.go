@@ -42,7 +42,7 @@ type Genre struct {
 
 type Anime struct {
 	ID                     uint   `gorm:"primaryKey"`
-	AnilistID              uint   `gorm:"index" `
+	AnilistID              uint   `gorm:"unique"`
 	MalID                  uint   `gorm:"index"`
 	Title                  string `gorm:"not null"`
 	AnilistCover           *string

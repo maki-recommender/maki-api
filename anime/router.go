@@ -1,6 +1,7 @@
 package anime
 
 import (
+	"regexp"
 	"rickycorte/maki/models"
 	"strconv"
 	"strings"
@@ -13,6 +14,37 @@ import (
 var maxRecommendations = 100
 var defaultRecommendations = 12
 var listIsOldAfterSeconds = 15 * 60
+
+/* ----------------------------------------------------------------------------*/
+// validation
+
+// check if the username is valid
+func isUsernameValid(username string) bool {
+	match, _ := regexp.MatchString("^[a-zA-Z0-9_-]+$", username)
+	return match
+}
+
+// convert and check the requested number of reccomendations
+// on error return the standard number of recommendations
+func validReccommendationNumber(value string, standard, max int) int {
+	// take k from query string and validate
+	if value == "" {
+		return standard
+	}
+
+	k, err := strconv.Atoi(value)
+	if err != nil {
+		return standard
+	}
+
+	if k < 1 {
+		k = 1
+	} else if k > max {
+		k = max
+	}
+
+	return k
+}
 
 /* ----------------------------------------------------------------------------*/
 
@@ -55,7 +87,8 @@ func recommendAnimeHandler(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Username not allowed")
 	}
 
-	//TODO: take k and validate
+	// read required number of recommendations from query and validate
+	k := validReccommendationNumber(c.Query("k"), defaultRecommendations, maxRecommendations)
 
 	user, err := getDBUser(&site, reqUsername)
 	if err != nil {
@@ -75,7 +108,8 @@ func recommendAnimeHandler(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Unable to find the required user anime list")
 	}
 
-	recs, err := recommendAnimeToUser(user, defaultRecommendations)
+	//TODO: filter hentai if not requested, filter items without mal ids for mal users
+	recs, err := recommendAnimeToUser(user, k)
 
 	if err != nil {
 		return fiber.ErrInternalServerError

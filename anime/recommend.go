@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"math/rand"
-	"regexp"
 	"rickycorte/maki/datafetch"
 	"rickycorte/maki/models"
 	"rickycorte/maki/protos/RecommendationService"
@@ -58,12 +57,6 @@ func (ra *RecommendedAnime) FromPairPreferMal(a *models.Anime, r *Recommendation
 	if a.MalNormalizedScore != 0 {
 		ra.Score = int(a.MalNormalizedScore * 100)
 	}
-}
-
-// check if the username is valid
-func isUsernameValid(username string) bool {
-	match, _ := regexp.MatchString("^[a-zA-Z0-9_-]+$", username)
-	return match
 }
 
 //get db user, may return nil, nil if user was not found and no error occurred
