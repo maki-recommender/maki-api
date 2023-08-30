@@ -49,7 +49,7 @@ func errorHandler(c *fiber.Ctx, err error) error {
 
 func main() {
 
-	makiCfg := conf.GetConfigFromEnv()
+	makiCfg := conf.LoadGlobalConfigFormEnv()
 
 	appName := fmt.Sprintf("Maki v%d.%d.%d", conf.VERSION_MAJOR, conf.VERSION_MINOR, conf.VERSION_FIX)
 	fmt.Println(" ┌───────────────────────────────────────────────────┐")
@@ -58,12 +58,12 @@ func main() {
 	fmt.Println(" └───────────────────────────────────────────────────┘")
 
 	// connect and prepare databases
-	sql := conf.ConnectSQLDB(makiCfg.SqlDBConnection)
-	models.SetDatabase(sql)
+	models.SetDatabase(makiCfg.SQLConn)
 	models.Migrate()
 
 	// set gRPC settings
-	RecommendationService.SetMakiConfig(makiCfg)
+	// TODO: update to use an interface
+	RecommendationService.SetMakiConfig(makiCfg.Cfg)
 
 	// create fiber app
 	app := fiber.New(fiber.Config{
@@ -77,10 +77,11 @@ func main() {
 	}))
 
 	app.Get("/", index)
+	anime.RegisterConfig(makiCfg)
 	anime.RegisterHandlers(app)
 
 	//custom 404
 	app.Use(error404)
 
-	app.Listen(makiCfg.ServerAddress)
+	app.Listen(makiCfg.Cfg.ServerAddress)
 }

@@ -147,7 +147,7 @@ func checkUserListUpates(user *models.TrackingSiteUser) error {
 		return datafetch.UpdateAnimeList(user)
 	} else {
 		// sync in background if list is considered outdated
-		if user.IsListOlderThan(listIsOldAfterSeconds) {
+		if user.IsListOlderThan(cfg.ListIsOldAfterSeconds()) {
 			go datafetch.UpdateAnimeList(user)
 		}
 	}
@@ -203,7 +203,7 @@ func applyFilter(
 	items := make([]*RecommendationService.RecommendedItem, filter.KRandomBound)
 	ok := 0
 	for i := 0; ok < filter.KRandomBound && i < len(recs.Items); i++ {
-		ce := GetAnimeCache(uint(recs.Items[i].Id))
+		ce := GetAnimeLocalCacheEntry(uint(recs.Items[i].Id))
 
 		if !entryValidWithFilter(ce, filter) {
 			continue

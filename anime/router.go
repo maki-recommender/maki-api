@@ -8,12 +8,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
+	"github.com/redis/go-redis/v9"
 )
-
-// TODO: set from config
-var maxRecommendations = 100
-var defaultRecommendations = 12
-var listIsOldAfterSeconds = 15 * 60
 
 /* ----------------------------------------------------------------------------*/
 // validation
@@ -122,9 +118,12 @@ func recommendAnimeHandler(c *fiber.Ctx) error {
 	}
 
 	genre := validGenre(c.Query("genre"))
+	defRec := cfg.DefaultRecommendations()
+	maxRec := cfg.MaxRecommendations()
+
 	filters := RecommendationFilter{
-		K:            validRecommendationNumber(c.Query("k"), defaultRecommendations, maxRecommendations),
-		KRandomBound: 2 * maxRecommendations,
+		K:            validRecommendationNumber(c.Query("k"), defRec, maxRec),
+		KRandomBound: 2 * maxRec,
 		Shuffle:      true,
 		OnlyMal:      user.TrackingSite.Name == "mal",
 		NoHentai:     genre != "hentai",
@@ -142,6 +141,16 @@ func recommendAnimeHandler(c *fiber.Ctx) error {
 /* ----------------------------------------------------------------------------*/
 // configuration
 
+var cfg RecommendationConfig
+
+type RecommendationConfig interface {
+	Redis() *redis.Client
+
+	MaxRecommendations() int
+	DefaultRecommendations() int
+	ListIsOldAfterSeconds() int
+}
+
 //Register api handlers for /anime subpaths
 func RegisterHandlers(app *fiber.App) {
 	animeRouter := app.Group("/anime")
@@ -149,4 +158,8 @@ func RegisterHandlers(app *fiber.App) {
 	animeRouter.Get("/:site<minLen(3)>/:username<minLen(4),maxLen(30)>", recommendAnimeHandler)
 
 	go perdiocallyRefreshAnimeCache()
+}
+
+func RegisterConfig(config RecommendationConfig) {
+	cfg = config
 }

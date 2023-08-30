@@ -103,7 +103,7 @@ func perdiocallyRefreshAnimeCache() {
 }
 
 // return a pointer to a cache entry. May return nill if not found
-func GetAnimeCache(id uint) *AnimeCacheEntry {
+func GetAnimeLocalCacheEntry(id uint) *AnimeCacheEntry {
 	val, ok := animeCache.Load(id)
 	if ok {
 		return val.(*AnimeCacheEntry)
