@@ -21,9 +21,11 @@ type Configuration struct {
 	RedisDBConnection            string `required:"true"`
 
 	// recommedations settings
-	MaxRecommendations     int64 `default:"100"`
-	DefaultRecommendations int64 `default:"12"`
-	ListIsOldAfterSeconds  int64 `default:"900"`
+	MaxRecommendations               int64 `default:"100"`
+	DefaultRecommendations           int64 `default:"12"`
+	ListIsOldAfterSeconds            int64 `default:"3600"`
+	RecommendationCacheExpireSeconds int64 `default:"86400"`
+	CacheClearAfterSeconds           int64 `default:"604800"`
 }
 
 // Read configuration from environment variables named like:
@@ -98,6 +100,14 @@ func (c *GlobalConfiguration) DefaultRecommendations() int {
 
 func (c *GlobalConfiguration) ListIsOldAfterSeconds() int {
 	return int(c.Cfg.ListIsOldAfterSeconds)
+}
+
+func (c *GlobalConfiguration) RecommendationExpireSeconds() int {
+	return int(c.Cfg.RecommendationCacheExpireSeconds)
+}
+
+func (c *GlobalConfiguration) CacheExpireSeconds() int {
+	return int(c.Cfg.CacheClearAfterSeconds)
 }
 
 func LoadGlobalConfigFormEnv() *GlobalConfiguration {

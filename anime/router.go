@@ -149,6 +149,10 @@ type RecommendationConfig interface {
 	MaxRecommendations() int
 	DefaultRecommendations() int
 	ListIsOldAfterSeconds() int
+	// time before cache key is refreshed
+	RecommendationExpireSeconds() int
+	// time after cache entry is purged from redis to keep usage low
+	CacheExpireSeconds() int
 }
 
 //Register api handlers for /anime subpaths

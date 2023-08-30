@@ -1,7 +1,9 @@
 package anime
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"errors"
 	"math/rand"
 	"rickycorte/maki/datafetch"
@@ -10,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2/log"
+	"github.com/redis/go-redis/v9"
 )
 
 type AnimeRecommendationResult struct {
@@ -223,15 +226,74 @@ func applyFilter(
 	return items[:ok]
 }
 
-func recommendAnimeToUser(user *models.TrackingSiteUser, filter *RecommendationFilter) (*AnimeRecommendationResult, error) {
-
-	//TODO: check redis cache
-	recs, err := generateNewRecommendations(user)
-
-	log.Infof("Got %d fresh recommendations for %s user %s", len(recs.Items), user.TrackingSite.Name, user.Username)
-
+func encodeGob(v interface{}) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(v)
 	if err != nil {
 		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func decodeGob(b []byte, result interface{}) error {
+	buf := bytes.NewBuffer(b)
+	enc := gob.NewDecoder(buf)
+
+	return enc.Decode(result)
+}
+
+func generateAndCacheRecommendations(user *models.TrackingSiteUser, cacheKey, createAtCacheKey string) (*RecommendationService.RecommendedAnime, error) {
+
+	ctx := context.Background()
+	removeIn := time.Duration(cfg.CacheExpireSeconds() * int(time.Second))
+
+	// set first this key to eventually block multiple requests to refresh the recommendations
+	cfg.Redis().Set(ctx, createAtCacheKey, time.Now().Unix(), removeIn)
+
+	recs, err := generateNewRecommendations(user)
+	if err != nil {
+		return nil, err
+	}
+
+	data, _ := encodeGob(recs)
+	cfg.Redis().Set(context.Background(), cacheKey, data, removeIn)
+
+	return recs, nil
+}
+
+func recommendAnimeToUser(user *models.TrackingSiteUser, filter *RecommendationFilter) (*AnimeRecommendationResult, error) {
+
+	animeCacheKey := "anime_recs:" + user.Username + "@" + user.TrackingSite.Name
+	animeCacheGenTimeKey := animeCacheKey + "_createdAt"
+
+	var recs *RecommendationService.RecommendedAnime
+
+	redisDB := cfg.Redis()
+	ctx := context.Background()
+
+	cRecs, err := redisDB.Get(ctx, animeCacheKey).Bytes()
+
+	if err == nil && err != redis.Nil {
+		recs = &RecommendationService.RecommendedAnime{}
+		decodeGob(cRecs, &recs)
+
+		// check generation time key and refresh recommendations if they are too old
+		createdAt, err := redisDB.Get(ctx, animeCacheGenTimeKey).Int64()
+		if err != nil || time.Now().Unix()-createdAt > int64(cfg.CacheExpireSeconds()) {
+			go generateAndCacheRecommendations(user, animeCacheKey, animeCacheGenTimeKey)
+			log.Infof("Refreshing recommendations for %s user %s in background", user.TrackingSite.Name, user.Username)
+		}
+
+		log.Infof("Got %d cached recommendations for %s user %s", len(recs.Items), user.TrackingSite.Name, user.Username)
+	} else {
+		recs, err = generateAndCacheRecommendations(user, animeCacheKey, animeCacheGenTimeKey)
+		if err != nil {
+			return nil, err
+		}
+
+		log.Infof("Got %d fresh recommendations for %s user %s", len(recs.Items), user.TrackingSite.Name, user.Username)
 	}
 
 	k := filter.K
