@@ -21,10 +21,10 @@ func (s *SupportedTrackingSite) GetFromName(name string) (int, error) {
 /* ----------------------------------------------------------------------------*/
 
 type TrackingSiteUser struct {
-	ID               uint `gorm:"primaryKey"`
-	Username         string
-	ExternalID       int `gorm:"not null;uniqueIndex:idx_user_site_unique"` // id on the tracking size
-	TrackingSiteID   int `gorm:"not null;uniqueIndex:idx_user_site_unique"`
+	ID               uint   `gorm:"primaryKey"`
+	Username         string `gorm:"index:idx_usr_search"`
+	ExternalID       int    `gorm:"not null;uniqueIndex:idx_user_site_unique"` // id on the tracking size
+	TrackingSiteID   int    `gorm:"not null;uniqueIndex:idx_user_site_unique;index:idx_usr_search"`
 	TrackingSite     SupportedTrackingSite
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
