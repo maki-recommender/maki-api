@@ -72,7 +72,7 @@ func (u *TrackingSiteUser) Create() error {
 /* ----------------------------------------------------------------------------*/
 
 type AnimeListEntry struct {
-	UserID        uint `gorm:"primaryKey;autoIncrement:false" json:"-"`
+	UserID        uint `gorm:"primaryKey;autoIncrement:false;index:idx_list_fetch" json:"-"`
 	User          TrackingSiteUser
 	AnimeID       uint `gorm:"primaryKey;autoIncrement:false" json:"-"`
 	Anime         Anime
