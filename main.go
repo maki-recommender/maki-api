@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/middleware/favicon"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 // center the string given a number of spaces
@@ -75,6 +76,7 @@ func main() {
 		TimeFormat: "2006/01/02 15:04:05.0700",
 		TimeZone:   "Europe/London",
 	}))
+	app.Use(recover.New())
 
 	app.Get("/", index)
 	anime.RegisterConfig(makiCfg)
