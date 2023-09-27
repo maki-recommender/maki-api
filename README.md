@@ -21,7 +21,7 @@ Variables without a default value must be assigned.
 
 **Description:** Redis database connection url
 
-**Example** "redis://{ip}:{post}"
+**Example** "redis://{ip}:{port}"
 
 
 `MAKI_ServerAddress`
@@ -39,7 +39,7 @@ Variables without a default value must be assigned.
 
 `MAKI_MaxRecommendations`
 
-**Description:** Maximum number of recommendation that a user can get in a single request (Max value of k url parameter)
+**Description:** Maximum number of recommendations that a user can get in a single request (Max value of k url parameter)
 
 **Default:** 100
 
@@ -57,13 +57,13 @@ Variables without a default value must be assigned.
 
 `MAKI_RecommendationCacheExpireSeconds`
 
-**Description:** Time to expire internal cache of generated recommendations. Its recommended to keep a high value to keep the load on the server as low as possible.
+**Description:** Time to expire internal cache of generated recommendations. It's recommended to keep a high value to keep the load on the server as low as possible.
 
 **Default:** 86400 (24 hours)
 
 `MAKI_CacheClearAfterSeconds`
 
-**Description:** Time (in seconds) after recommendation cache is completely purged for user that do not use Maki for a long time
+**Description:** Time (in seconds) after recommendation cache is completely purged for users that do not use Maki for a long time
 
 **Default:** 604800 (7 days)
 
