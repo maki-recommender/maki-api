@@ -1,5 +1,5 @@
 # Build image
-FROM golang:1.18 as builder
+FROM golang:1.18-bullseye as builder
 
 COPY anime anime
 COPY conf conf
@@ -17,7 +17,7 @@ RUN go mod verify
 RUN go build -o /maki
 
 # actual image
-FROM debian:bullseye-slim
+FROM debian:bullseye
 
 COPY --from=builder /maki /maki
 
