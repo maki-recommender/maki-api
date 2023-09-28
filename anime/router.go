@@ -101,6 +101,7 @@ func recommendAnimeHandler(c *fiber.Ctx) error {
 
 	user, err := getDBUser(&site, reqUsername)
 	if err != nil {
+		log.Error(err)
 		return fiber.ErrInternalServerError
 	}
 
@@ -108,12 +109,14 @@ func recommendAnimeHandler(c *fiber.Ctx) error {
 	if user == nil {
 		user, err = createValidDBUser(&site, reqUsername)
 		if err != nil {
+			log.Error(err)
 			return fiber.NewError(fiber.StatusBadRequest, "Unable to find the required user")
 		}
 	}
 
 	err = checkUserListUpates(user)
 	if err != nil {
+		log.Error(err)
 		return fiber.NewError(fiber.StatusBadRequest, "Unable to find the required user anime list")
 	}
 

@@ -17,7 +17,9 @@ RUN go mod verify
 RUN go build -o /maki
 
 # actual image
-FROM debian:bullseye
+FROM debian:bullseye-slim
+
+RUN apt-get update -y && apt-get install -y ca-certificates && apt-get clean -y
 
 COPY --from=builder /maki /maki
 
